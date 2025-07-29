@@ -1,0 +1,24 @@
+// Suppress Eclipse IDE configuration warnings
+initscript {
+    repositories {
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+    }
+}
+
+allprojects {
+    // Suppress warnings about missing .settings folder
+    tasks.configureEach { task ->
+        if (task.name.contains('eclipse') || task.name.contains('buildship')) {
+            task.enabled = false
+        }
+    }
+    
+    // Disable Eclipse plugin if present
+    plugins.configureEach { plugin ->
+        if (plugin.class.name.contains('eclipse')) {
+            plugin.enabled = false
+        }
+    }
+}

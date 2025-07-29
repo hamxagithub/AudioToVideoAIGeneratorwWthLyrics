@@ -7,6 +7,10 @@ buildscript {
         ndkVersion = "27.1.12297006"
         kotlinVersion = "2.1.20"
     }
+    
+    // Apply warning suppression script
+    apply from: 'suppress-warnings.gradle'
+    
     repositories {
         google()
         mavenCentral()

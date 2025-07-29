@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 
 // Import all modules
-import UserInputModule from './src/modules/UserInputModule';
+
 import { AudioTranscriptionModule } from './src/modules/AudioTranscriptionModule';
 import { VisualBackgroundGenerator } from './src/modules/VisualBackgroundGenerator';
 import { VideoRenderingModule } from './src/modules/VideoRenderingModule';
@@ -36,9 +36,9 @@ import {
 
 // Import components
 import RenderingProgressScreen from './src/components/RenderingProgressScreen';
-
 import VideoPreviewScreen from './src/components/VideoPreviewScreen';
 import AuthScreen from './src/components/AuthScreen';
+import UserInputModule from './src/modules/UserInputModule';
 
 type AppState = 
   | 'input' 
