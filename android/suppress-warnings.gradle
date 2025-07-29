@@ -1,12 +1,5 @@
-// Suppress Eclipse IDE configuration warnings
-initscript {
-    repositories {
-        gradlePluginPortal()
-        google()
-        mavenCentral()
-    }
-}
-
+// Suppress Eclipse IDE configuration warnings and NDK issues
+// Configure all projects to suppress common warnings
 allprojects {
     // Suppress warnings about missing .settings folder
     tasks.configureEach { task ->

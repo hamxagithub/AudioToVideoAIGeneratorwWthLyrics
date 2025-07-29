@@ -8,7 +8,7 @@ import {
   ScrollView,
   TextInput,
 } from 'react-native';
-import DocumentPicker from 'react-native-document-picker';
+// import DocumentPicker from 'react-native-document-picker'; // Temporarily disabled
 import { AudioFile, VideoStyle, VideoPreferences } from '../types';
 
 interface UserInputModuleProps {
@@ -38,30 +38,25 @@ const UserInputModule: React.FC<UserInputModuleProps> = ({
 
   const handleAudioUpload = useCallback(async () => {
     try {
-      const result = await DocumentPicker.pickSingle({
-        type: [
-          DocumentPicker.types.audio,
-          'audio/mp3',
-          'audio/wav',
-          'audio/aac',
-          'audio/m4a',
-        ],
-        copyTo: 'documentDirectory',
-      });
-
-      const audioFile: AudioFile = {
-        uri: result.fileCopyUri || result.uri,
-        fileName: result.name || 'audio_file',
-        size: result.size || 0,
-        type: result.type || 'audio/mp3',
+      // Temporarily disabled - use manual file input
+      Alert.alert(
+        'Audio Upload', 
+        'Document picker temporarily disabled. Please use alternative method to add audio files.',
+        [{ text: 'OK' }]
+      );
+      
+      // For demo purposes, create a mock audio file
+      const mockAudioFile: AudioFile = {
+        uri: 'file://path/to/sample/audio.mp3',
+        fileName: 'sample_audio.mp3',
+        size: 1024000,
+        type: 'audio/mp3',
       };
-
-      setSelectedAudio(audioFile);
-      onAudioSelected(audioFile);
+      
+      setSelectedAudio(mockAudioFile);
+      onAudioSelected(mockAudioFile);
     } catch (error) {
-      if (!DocumentPicker.isCancel(error)) {
-        Alert.alert('Error', 'Failed to select audio file');
-      }
+      Alert.alert('Error', 'Failed to select audio file');
     }
   }, [onAudioSelected]);
 
