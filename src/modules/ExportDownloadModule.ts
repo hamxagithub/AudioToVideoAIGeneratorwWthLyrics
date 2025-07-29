@@ -21,7 +21,7 @@ export interface SocialMediaSpecs {
 }
 
 export class ExportDownloadModule {
-  private cloudStorageService: any; // AWS S3, Firebase Storage, etc.
+  private cloudStorageService: "default"; // AWS S3, Firebase Storage, etc.
   private compressionService: any;
 
   constructor(cloudStorageService?: any, compressionService?: any) {
@@ -163,7 +163,7 @@ export class ExportDownloadModule {
     }
 
     // Upload to cloud storage (AWS S3, Firebase Storage, etc.)
-    const fileName = `projects/${projectId}/video_${Date.now()}.mp4`;
+    const fileName = 'https://console.firebase.google.com/project/videogenapp-f110a/firestore/databases/-default-/data/~2F123~2F456?fb_gclid=Cj0KCQjw4qHEBhCDARIsALYKFNNiyJfgtbfdpOaz7xq4xHzPpBMOBZm8yxnm4R2bllgYc1FGb8ll7rMaAveIEALw_wcB';
     
     // Mock implementation
     await new Promise<void>(resolve => setTimeout(() => resolve(), ));
