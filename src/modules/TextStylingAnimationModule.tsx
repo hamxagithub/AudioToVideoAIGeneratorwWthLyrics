@@ -17,25 +17,38 @@ const AnimatedLyric: React.FC<AnimatedLyricProps> = ({
   isActive,
   currentTime,
 }) => {
+  // Safety checks
+  if (!transcription || !transcription.text || !style) {
+    return null;
+  }
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const translateYAnim = useRef(new Animated.Value(20)).current;
   const colorAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    let animationRef: Animated.CompositeAnimation | null = null;
+    
     if (isActive) {
+      // Reset animations to initial state
+      fadeAnim.setValue(0);
+      scaleAnim.setValue(0.8);
+      translateYAnim.setValue(20);
+      colorAnim.setValue(0);
+      
       // Animate in based on animation type
       switch (style.animationType) {
         case 'fade':
-          Animated.timing(fadeAnim, {
+          animationRef = Animated.timing(fadeAnim, {
             toValue: 1,
             duration: 300,
             useNativeDriver: true,
-          }).start();
+          });
           break;
           
         case 'bounce':
-          Animated.sequence([
+          animationRef = Animated.sequence([
             Animated.timing(scaleAnim, {
               toValue: 1.2,
               duration: 200,
@@ -46,11 +59,11 @@ const AnimatedLyric: React.FC<AnimatedLyricProps> = ({
               duration: 200,
               useNativeDriver: true,
             }),
-          ]).start();
+          ]);
           break;
           
         case 'slide':
-          Animated.parallel([
+          animationRef = Animated.parallel([
             Animated.timing(fadeAnim, {
               toValue: 1,
               duration: 300,
@@ -61,35 +74,54 @@ const AnimatedLyric: React.FC<AnimatedLyricProps> = ({
               duration: 300,
               useNativeDriver: true,
             }),
-          ]).start();
+          ]);
           break;
           
         case 'karaoke':
-          Animated.timing(colorAnim, {
+          const duration = Math.max((transcription.end - transcription.start) * 1000, 500);
+          animationRef = Animated.timing(colorAnim, {
             toValue: 1,
-            duration: (transcription.end - transcription.start) * 1000,
+            duration: duration,
             useNativeDriver: false,
-          }).start();
+          });
           break;
+        default:
+          animationRef = Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          });
+      }
+      
+      if (animationRef) {
+        animationRef.start();
       }
     } else {
       // Animate out
-      Animated.timing(fadeAnim, {
+      animationRef = Animated.timing(fadeAnim, {
         toValue: 0,
         duration: 200,
         useNativeDriver: true,
-      }).start();
+      });
+      animationRef.start();
     }
-  }, [isActive, style.animationType]);
+
+    // Cleanup function to stop animations on unmount
+    return () => {
+      if (animationRef) {
+        animationRef.stop();
+      }
+    };
+  }, [isActive, style.animationType, transcription.start, transcription.end, fadeAnim, scaleAnim, translateYAnim, colorAnim]);
 
   const getTextColor = () => {
     if (style.animationType === 'karaoke') {
       return colorAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: [style.fontColor, '#FFD700'], // Gold highlight for karaoke
+        outputRange: [style.fontColor || '#FFFFFF', '#FFD700'], // Gold highlight for karaoke
       });
     }
-    return style.fontColor;
+    return style.fontColor || '#FFFFFF'; // Default white color
   };
 
   return (
@@ -129,11 +161,17 @@ interface TextStylingAnimationModuleProps {
 }
 
 export const TextStylingAnimationModule: React.FC<TextStylingAnimationModuleProps> = ({
-  transcriptions,
+  transcriptions = [],
   style,
-  currentTime,
-  videoDimensions,
+  currentTime = 0,
+  videoDimensions = { width: 400, height: 600 },
 }) => {
+  // Safety check for required props
+  if (!style || !videoDimensions) {
+    console.warn('TextStylingAnimationModule: Missing required props');
+    return null;
+  }
+
   const getContainerStyle = () => {
     const baseStyle = {
       position: 'absolute' as const,
@@ -151,7 +189,7 @@ export const TextStylingAnimationModule: React.FC<TextStylingAnimationModuleProp
       case 'center':
         return {
           ...baseStyle,
-          top: videoDimensions.height / 2 - 50,
+          top: Math.max(videoDimensions.height / 2 - 50, 0),
         };
       case 'bottom':
         return {
@@ -167,13 +205,24 @@ export const TextStylingAnimationModule: React.FC<TextStylingAnimationModuleProp
   };
 
   const getActiveTranscriptions = () => {
-    return transcriptions.filter(
-      t => currentTime >= t.start && currentTime <= t.end
-    );
+    try {
+      return transcriptions.filter(
+        t => t && typeof t.start === 'number' && typeof t.end === 'number' && 
+             currentTime >= t.start && currentTime <= t.end
+      );
+    } catch (error) {
+      console.warn('Error filtering active transcriptions:', error);
+      return [];
+    }
   };
 
   const getUpcomingTranscription = () => {
-    return transcriptions.find(t => t.start > currentTime);
+    try {
+      return transcriptions.find(t => t && typeof t.start === 'number' && t.start > currentTime);
+    } catch (error) {
+      console.warn('Error finding upcoming transcription:', error);
+      return null;
+    }
   };
 
   return (
@@ -182,14 +231,16 @@ export const TextStylingAnimationModule: React.FC<TextStylingAnimationModuleProp
         style={[
           styles.textBackground,
           {
-            backgroundColor: style.backgroundColor,
+            backgroundColor: style.backgroundColor || 'rgba(0,0,0,0.5)',
             borderRadius: 8,
           },
         ]}
       >
         {/* Active lyrics */}
         {getActiveTranscriptions().map((transcription, index) => {
-          const lyricKey = `${transcription.start}-${index}`;
+          if (!transcription || !transcription.text) return null;
+          
+          const lyricKey = `${transcription.start}-${index}-${transcription.text.substring(0, 10)}`;
           return (
             <AnimatedLyric
               key={lyricKey}
@@ -205,7 +256,10 @@ export const TextStylingAnimationModule: React.FC<TextStylingAnimationModuleProp
         {style.animationType === 'fade' && getUpcomingTranscription() && (
           <AnimatedLyric
             transcription={getUpcomingTranscription()!}
-            style={{ ...style, fontColor: `${style.fontColor}80` }} // Semi-transparent
+            style={{ 
+              ...style, 
+              fontColor: style.fontColor ? `${style.fontColor}80` : '#FFFFFF80' 
+            }} // Semi-transparent
             isActive={false}
             currentTime={currentTime}
           />
@@ -220,8 +274,17 @@ export class TextLayoutEngine {
   private style: VideoStyle;
 
   constructor(videoDimensions: { width: number; height: number }, style: VideoStyle) {
-    this.videoDimensions = videoDimensions;
-    this.style = style;
+    // Safety checks with defaults
+    this.videoDimensions = videoDimensions || { width: 400, height: 600 };
+    this.style = style || {
+      fontSize: 16,
+      fontFamily: 'Arial',
+      fontColor: '#FFFFFF',
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      textPosition: 'bottom',
+      animationType: 'fade',
+      theme: 'minimal'
+    };
   }
 
   /**
@@ -232,6 +295,10 @@ export class TextLayoutEngine {
     position: { x: number; y: number };
     maxWidth: number;
   }> {
+    if (!Array.isArray(transcriptions) || transcriptions.length === 0) {
+      return [];
+    }
+
     const layouts: Array<{
       transcription: TranscriptionResult;
       position: { x: number; y: number };
@@ -239,16 +306,24 @@ export class TextLayoutEngine {
     }> = [];
 
     const maxWidth = this.videoDimensions.width * 0.9; // 90% of video width
-    const lineHeight = this.style.fontSize * 1.5;
+    const lineHeight = (this.style.fontSize || 16) * 1.5;
 
     transcriptions.forEach((transcription, index) => {
-      const position = this.calculatePosition(index, lineHeight);
+      if (!transcription || typeof transcription.start !== 'number' || typeof transcription.end !== 'number') {
+        return; // Skip invalid transcriptions
+      }
       
-      layouts.push({
-        transcription,
-        position,
-        maxWidth,
-      });
+      try {
+        const position = this.calculatePosition(index, lineHeight);
+        
+        layouts.push({
+          transcription,
+          position,
+          maxWidth,
+        });
+      } catch (error) {
+        console.warn('Error calculating text layout for transcription:', transcription, error);
+      }
     });
 
     return layouts;
@@ -311,9 +386,9 @@ export class TextLayoutEngine {
    */
   generateTextStyles(): any {
     return {
-      fontSize: this.style.fontSize,
-      fontFamily: this.style.fontFamily,
-      color: this.style.fontColor,
+      fontSize: this.style.fontSize || 16,
+      fontFamily: this.style.fontFamily || 'Arial',
+      color: this.style.fontColor || '#FFFFFF',
       textAlign: 'center',
       textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
       fontWeight: 'bold',
@@ -411,3 +486,50 @@ const styles = StyleSheet.create({
     textShadowRadius: 3,
   },
 });
+
+// Error Boundary Component
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error?: Error;
+}
+
+class TextAnimationErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  ErrorBoundaryState
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('TextStylingAnimationModule Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+          <Text style={{ color: '#FFFFFF', textAlign: 'center' }}>
+            Text animation temporarily unavailable
+          </Text>
+        </View>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+// Wrapped component with error boundary
+export const SafeTextStylingAnimationModule: React.FC<TextStylingAnimationModuleProps> = (props) => {
+  return (
+    <TextAnimationErrorBoundary>
+      <TextStylingAnimationModule {...props} />
+    </TextAnimationErrorBoundary>
+  );
+};
